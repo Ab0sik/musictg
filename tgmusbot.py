@@ -4,11 +4,12 @@ import requests
 from pytubefix import Search, YouTube
 from io import BytesIO
 import os
+from flask import Flask, request
 
 # Конфигурация бота
-BOT_TOKEN = "7993987166:AAFKhbLsUWf-1SzEuOCU8acYt_OxCZR-9Qs"  # Замените на ваш токен
+BOT_TOKEN = os.getenv("TELEGRAM_TOKEN", "7993987166:AAFKhbLsUWf-1SzEuOCU8acYt_OxCZR-9Qs")
 BOT_NAME = "Wilderry"
-BOT_USERNAME = "wilderrybot"  # Должен заканчиваться на Bot
+BOT_USERNAME = "wilderrybot"
 BOT_DESCRIPTION = """
 <b>🔍 Музыкальный бот с быстрым поиском</b>
 
@@ -19,12 +20,12 @@ BOT_DESCRIPTION = """
 Просто введи название песни или исполнителя!
 """
 
-# Инициализация бота
+# Инициализация бота и Flask приложения
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
+app = Flask(__name__)
 
-# Временное хранилище данных
+# Инициализация хранилища данных
 user_data = {}
-
 
 def create_main_menu():
     """Создает главное меню с кнопками"""
@@ -292,7 +293,25 @@ def download_track(call):
             reply_markup=create_back_button()
         )
 
+# Вебхук обработчики
+@app.route('/' + BOT_TOKEN, methods=['POST'])
+def webhook():
+    update = telebot.types.Update.de_json(request.stream.read().decode('utf-8'))
+    bot.process_new_updates([update])
+    return 'ok', 200
 
-if __name__ == "__main__":
-    print(f"Бот {BOT_NAME} (@{BOT_USERNAME}) запущен!")
-    bot.infinity_polling()
+@app.route('/')
+def set_webhook():
+    bot.remove_webhook()
+    webhook_url = os.getenv("WEBHOOK_URL", "") + BOT_TOKEN
+    bot.set_webhook(url=webhook_url)
+    return f'Webhook set to {webhook_url}', 200
+
+if __name__ == '__main__':
+    # Для локального тестирования с polling
+    if os.getenv("ENVIRONMENT") == "development":
+        print(f"Бот {BOT_NAME} (@{BOT_USERNAME}) запущен в режиме polling!")
+        bot.infinity_polling()
+    else:
+        # Для production с вебхуками
+        app.run(host='0.0.0.0', port=5000)
