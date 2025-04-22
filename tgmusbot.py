@@ -294,18 +294,23 @@ def download_track(call):
         )
 
 # Вебхук обработчики
-@app.route('/' + BOT_TOKEN, methods=['POST'])
-def webhook():
-    update = telebot.types.Update.de_json(request.stream.read().decode('utf-8'))
-    bot.process_new_updates([update])
-    return 'ok', 200
+@app.route('/', methods=['GET'])
+def home():
+    return {"status": "Bot is running", "deploy": os.getenv("RENDER_EXTERNAL_URL")}, 200
 
-@app.route('/')
+@app.route('/set_webhook', methods=['GET'])
 def set_webhook():
+    webhook_url = f"https://telegram-bot-o8wp.onrender.com/{BOT_TOKEN}"
     bot.remove_webhook()
-    webhook_url = os.getenv("WEBHOOK_URL", "") + BOT_TOKEN
     bot.set_webhook(url=webhook_url)
-    return f'Webhook set to {webhook_url}', 200
+    return f"Webhook set to {webhook_url}", 200
+
+@app.route(f'/{BOT_TOKEN}', methods=['POST'])
+def webhook():
+    if request.method == "POST":
+        update = telebot.types.Update.de_json(request.stream.read().decode('utf-8'))
+        bot.process_new_updates([update])
+    return "ok", 200
 
 if __name__ == '__main__':
     # Для локального тестирования с polling
