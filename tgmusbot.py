@@ -312,6 +312,10 @@ def webhook():
         bot.process_new_updates([update])
     return "ok", 200
 
+@app.route('/ping')
+def ping():
+    return "pong", 200
+
 if __name__ == '__main__':
     # Для локального тестирования с polling
     if os.getenv("ENVIRONMENT") == "development":
